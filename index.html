@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nan and Chom Matcha & Sandwich</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap');
+        body { font-family: 'Prompt', sans-serif; }
+        .menu-card { transition: all 0.2s; }
+        .out-of-stock { filter: grayscale(1); opacity: 0.5; pointer-events: none; }
+        .loading-dots:after { content: '.'; animation: dots 1.5s steps(5, end) infinite;}
+        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } }
+    </style>
+</head>
+<body class="bg-stone-50 min-h-screen pb-10">
+
+    <div class="max-w-md mx-auto bg-white shadow-xl min-h-screen md:min-h-fit md:mt-10 md:rounded-3xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-emerald-800 p-8 text-white text-center">
+            <h1 class="text-2xl font-semibold">Nan and Chom</h1>
+            <p class="text-emerald-100 text-sm mt-1">Matcha & Sandwich</p>
+        </div>
+
+        <form id="orderForm" class="p-6 space-y-6">
+            <!-- ข้อมูลเลขที่จัดส่ง -->
+            <div class="space-y-4">
+                <label class="block">
+                    <span class="text-gray-700 font-medium text-sm">เลขที่จัดส่ง</span>
+                    <input type="text" name="orderNumber" placeholder="ระบุเลขที่ห้อง/โต๊ะ" required 
+                        class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                </label>
+            </div>
+
+            <!-- รายการเมนูพร้อมสต็อก -->
+            <div class="space-y-3" id="menuList">
+                <div class="text-center py-10 text-gray-400 text-sm">กำลังโหลดสต็อกสินค้า...</div>
+            </div>
+
+            <!-- ตัวเลือกส่วนลด -->
+            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" id="noCupDiscount" class="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500">
+                    <span class="text-sm font-medium text-emerald-900 italic">ไม่รับแก้ว / น้ำแข็ง (-5 บาท)</span>
+                </label>
+            </div>
+
+            <!-- ส่วนแนบสลิป -->
+            <div class="space-y-2">
+                <span class="text-gray-700 font-medium text-sm">แนบสลิปโอนเงิน</span>
+                <input type="file" id="slipInput" accept="image/*" class="hidden" required>
+                <label for="slipInput" class="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 hover:bg-emerald-50 cursor-pointer overflow-hidden transition-all">
+                    <div id="uploadUI" class="text-center">
+                        <i data-lucide="image-plus" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
+                        <p class="text-xs text-gray-400">เลือกรูปภาพสลิปของคุณ</p>
+                    </div>
+                    <img id="previewImg" class="hidden w-full h-full object-contain p-2">
+                </label>
+            </div>
+
+            <!-- สรุปราคารวม -->
+            <div class="bg-gray-900 p-6 rounded-3xl text-white shadow-lg">
+                <div class="flex justify-between items-baseline">
+                    <span class="text-gray-400 text-sm">ยอดรวมทั้งสิ้น</span>
+                    <span id="totalText" class="text-3xl font-bold text-emerald-400">฿ 0</span>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-2 transition-all active:scale-95">
+                <i data-lucide="send" class="w-5 h-5"></i>
+                <span>ยืนยันออเดอร์</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- หน้าจอรอการส่งข้อมูล -->
+    <div id="loading" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl text-center space-y-4">
+            <div class="animate-spin h-10 w-10 border-4 border-emerald-800 border-t-transparent rounded-full mx-auto"></div>
+            <p class="font-medium text-emerald-900 loading-dots">กำลังบันทึกข้อมูลและตัดสต็อก</p>
+        </div>
+    </div>
+
+    <script>
+        // URL สคริปต์ใหม่ที่คุณลูกค้าให้มาค่ะ
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxrZThRMUWHsi_STnR0gEQtUo7cAcD-KjMpa_vr1moWVju4COGZj_gB7cU3LcbJ_nEl/exec";
+
+        let MENU = [
+            { id: 'm1', name: 'เพียวมัทฉะ', price: 60, stock: 0, icon: 'leaf' },
+            { id: 'm2', name: 'มัทฉะลาเต้', price: 65, stock: 0, icon: 'coffee' },
+            { id: 'm3', name: 'แซนด์วิชทูน่า (โฮลวีต)', price: 35, stock: 0, icon: 'sandwich' },
+            { id: 'm4', name: 'แซนด์วิชทูน่า (ขาวตัดขอบ)', price: 35, stock: 0, icon: 'sandwich' }
+        ];
+
+        let state = { items: {}, slip: null, fileName: "" };
+        MENU.forEach(m => state.items[m.id] = 0);
+
+        // ดึงข้อมูลสต็อกปัจจุบันจากชีต Stock
+        async function fetchStock() {
+            try {
+                const res = await fetch(SCRIPT_URL);
+                const stockData = await res.json();
+                MENU.forEach(m => { m.stock = stockData[m.id] || 0; });
+                renderMenu();
+            } catch (e) {
+                console.error("Stock Fetch Failed");
+                renderMenu();
+            }
+        }
+
+        // วาดรายการเมนูและปุ่มเพิ่มลด
+        function renderMenu() {
+            const menuList = document.getElementById('menuList');
+            menuList.innerHTML = '';
+            MENU.forEach(m => {
+                const isOut = m.stock <= 0;
+                const div = document.createElement('div');
+                div.className = `flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm ${isOut ? 'out-of-stock' : ''}`;
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-emerald-50 p-2 rounded-lg text-emerald-700">
+                             <i data-lucide="${m.icon}" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-800 text-sm">${m.name}</div>
+                            <div class="text-[10px] text-gray-400">฿ ${m.price} | คงเหลือ ${m.stock}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="changeQty('${m.id}', -1)" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center">-</button>
+                        <span class="font-bold text-emerald-800 w-4 text-center text-sm">${state.items[m.id]}</span>
+                        <button type="button" onclick="changeQty('${m.id}', 1)" ${state.items[m.id] >= m.stock ? 'disabled' : ''} class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 disabled:opacity-30 flex items-center justify-center">+</button>
+                    </div>
+                `;
+                menuList.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        // เปลี่ยนจำนวนสินค้า
+        function changeQty(id, delta) {
+            const item = MENU.find(m => m.id === id);
+            state.items[id] = Math.max(0, Math.min(item.stock, state.items[id] + delta));
+            updateTotal();
+            renderMenu();
+        }
+
+        document.getElementById('noCupDiscount').addEventListener('change', updateTotal);
+
+        // คำนวณยอดเงินรวม
+        function updateTotal() {
+            let subtotal = 0, totalQty = 0;
+            MENU.forEach(m => {
+                subtotal += state.items[m.id] * m.price;
+                totalQty += state.items[m.id];
+            });
+            const discount = (document.getElementById('noCupDiscount').checked && totalQty > 0) ? 5 : 0;
+            document.getElementById('totalText').innerText = `฿ ${Math.max(0, subtotal - discount).toLocaleString()}`;
+        }
+
+        // จัดการการอัปโหลดรูปภาพสลิป
+        document.getElementById('slipInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                state.slip = ev.target.result.split(',')[1];
+                state.fileName = file.name;
+                document.getElementById('previewImg').src = ev.target.result;
+                document.getElementById('previewImg').classList.remove('hidden');
+                document.getElementById('uploadUI').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ส่งข้อมูลออเดอร์
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const totalQty = Object.values(state.items).reduce((a, b) => a + b, 0);
+            if (totalQty === 0) return alert('กรุณาเลือกเมนูอย่างน้อย 1 อย่างก่อนส่งออเดอร์นะคะ 😊');
+            if (!state.slip) return alert('รบกวนแนบสลิปโอนเงินเพื่อยืนยันออเดอร์ด้วยค่ะ');
+
+            document.getElementById('loading').classList.remove('hidden');
+            const payload = {
+                orderNumber: e.target.orderNumber.value,
+                m1: state.items.m1, m2: state.items.m2, m3: state.items.m3, m4: state.items.m4,
+                noCup: document.getElementById('noCupDiscount').checked ? "ใช่" : "ไม่ใช่",
+                total: document.getElementById('totalText').innerText.replace('฿ ', ''),
+                timestamp: new Date().toLocaleString('th-TH'),
+                slipData: state.slip,
+                slipName: state.fileName
+            };
+            
+            try {
+                // ใช้ POST แบบ no-cors เพื่อส่งข้อมูลไปยัง Apps Script
+                await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    cache: 'no-cache',
+                    body: JSON.stringify(payload) 
+                });
+                
+                alert('ส่งออเดอร์และตัดสต็อกเรียบร้อยแล้วค่ะ! ขอบคุณมากนะคะ');
+                location.reload(); // รีโหลดเพื่ออัปเดตสต็อกล่าสุด
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่นะคะ');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        });
+
+        // เริ่มโหลดข้อมูลสต็อกเมื่อเปิดหน้าเว็บ
+        fetchStock();
+    </script>
+</body>
+</html>
