@@ -9,95 +9,169 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap');
         body { font-family: 'Prompt', sans-serif; }
+        
         .menu-card { transition: all 0.2s; }
         .out-of-stock { filter: grayscale(1); opacity: 0.5; pointer-events: none; }
+        
+        .option-btn {
+            border: 1px solid #e2e8f0;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.75rem;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            background-color: white;
+            display: inline-block;
+            margin-right: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .option-btn:hover {
+            background-color: #ecfdf5;
+        }
+        
+        .option-selected {
+            background-color: #059669 !important;
+            border-color: #059669 !important;
+            color: white !important;
+            font-weight: 500;
+        }
+
         .loading-dots:after { content: '.'; animation: dots 1.5s steps(5, end) infinite;}
         @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } }
     </style>
 </head>
-<body class="bg-stone-50 min-h-screen pb-10">
+<body class="bg-stone-50 min-h-screen pb-10 text-slate-800">
 
-    <div class="max-w-md mx-auto bg-white shadow-xl min-h-screen md:min-h-fit md:mt-10 md:rounded-3xl overflow-hidden">
+    <div class="max-w-md mx-auto bg-white shadow-xl min-h-screen md:min-h-fit md:mt-10 md:rounded-[2.5rem] overflow-hidden border border-gray-100">
         <!-- Header -->
-        <div class="bg-emerald-800 p-8 text-white text-center">
-            <h1 class="text-2xl font-semibold">Nan and Chom</h1>
-            <p class="text-emerald-100 text-sm mt-1">Matcha & Sandwich</p>
+        <div class="bg-emerald-800 p-8 text-white text-center relative">
+            <h1 class="text-2xl font-bold tracking-tight">Nan and Chom</h1>
+            <p class="text-emerald-100 text-sm mt-1 opacity-90">Matcha & Sandwich Pre-Order</p>
         </div>
 
-        <form id="orderForm" class="p-6 space-y-6">
-            <!-- ข้อมูลเลขที่จัดส่ง -->
-            <div class="space-y-4">
-                <label class="block">
-                    <span class="text-gray-700 font-medium text-sm">เลขที่จัดส่ง</span>
-                    <input type="text" name="orderNumber" placeholder="ระบุเลขที่ห้อง/โต๊ะ" required 
-                        class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
-                </label>
-            </div>
+        <form id="orderForm" class="p-6 space-y-8">
+            <!-- ระบุเลขที่ -->
+            <section class="space-y-3">
+                <div class="flex items-center space-x-2 text-emerald-800">
+                    <i data-lucide="map-pin" class="w-5 h-5"></i>
+                    <h2 class="font-bold text-sm">ระบุเลขที่</h2>
+                </div>
+                <input type="text" name="orderNumber" placeholder="ระบุเลขที่" required 
+                    class="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm">
+            </section>
 
-            <!-- รายการเมนูพร้อมสต็อก -->
-            <div class="space-y-3" id="menuList">
-                <div class="text-center py-10 text-gray-400 text-sm">กำลังโหลดสต็อกสินค้า...</div>
-            </div>
+            <!-- รายการเมนู -->
+            <section class="space-y-4">
+                <div class="flex justify-between items-end">
+                    <div class="flex items-center space-x-2 text-emerald-800">
+                        <i data-lucide="utensils" class="w-5 h-5"></i>
+                        <h2 class="font-bold text-sm">รายการเมนูพรุ่งนี้</h2>
+                    </div>
+                    <span class="text-[10px] text-gray-400 font-medium">* ราคาลดอัตโนมัติหากไม่รับแก้ว</span>
+                </div>
+                
+                <div id="menuContainer" class="space-y-4">
+                    <div class="text-center py-10 text-gray-400 text-sm">กำลังโหลดข้อมูลสต็อก...</div>
+                </div>
+            </section>
 
             <!-- ตัวเลือกส่วนลด -->
-            <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
-                <label class="flex items-center space-x-3 cursor-pointer">
-                    <input type="checkbox" id="noCupDiscount" class="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500">
-                    <span class="text-sm font-medium text-emerald-900 italic">ไม่รับแก้ว / น้ำแข็ง (-5 บาท)</span>
-                </label>
-            </div>
-
-            <!-- ส่วนแนบสลิป -->
-            <div class="space-y-2">
-                <span class="text-gray-700 font-medium text-sm">แนบสลิปโอนเงิน</span>
-                <input type="file" id="slipInput" accept="image/*" class="hidden" required>
-                <label for="slipInput" class="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 hover:bg-emerald-50 cursor-pointer overflow-hidden transition-all">
-                    <div id="uploadUI" class="text-center">
-                        <i data-lucide="image-plus" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
-                        <p class="text-xs text-gray-400">เลือกรูปภาพสลิปของคุณ</p>
+            <section class="bg-emerald-50 p-5 rounded-3xl border border-emerald-100 shadow-sm">
+                <label class="flex items-start space-x-3 cursor-pointer">
+                    <input type="checkbox" id="noCupDiscount" class="mt-1 w-5 h-5 rounded-lg text-emerald-600 focus:ring-emerald-500 border-gray-300">
+                    <div>
+                        <span class="block text-sm font-bold text-emerald-900 leading-tight">ไม่รับแก้ว / ไม่รับน้ำแข็ง</span>
+                        <span class="text-xs text-emerald-600 mt-0.5 block italic">รับส่วนลด -5 บาท ต่อแก้วเครื่องดื่ม</span>
                     </div>
-                    <img id="previewImg" class="hidden w-full h-full object-contain p-2">
                 </label>
-            </div>
+            </section>
 
             <!-- สรุปราคารวม -->
-            <div class="bg-gray-900 p-6 rounded-3xl text-white shadow-lg">
+            <section class="bg-slate-900 p-6 rounded-[2rem] text-white shadow-lg relative overflow-hidden">
                 <div class="flex justify-between items-baseline">
-                    <span class="text-gray-400 text-sm">ยอดรวมทั้งสิ้น</span>
-                    <span id="totalText" class="text-3xl font-bold text-emerald-400">฿ 0</span>
+                    <span class="text-slate-400 text-sm font-medium">ยอดชำระสุทธิ</span>
+                    <div class="text-right">
+                        <span id="totalText" class="text-3xl font-bold text-emerald-400">฿ 0</span>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <button type="submit" id="submitBtn" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-2 transition-all active:scale-95">
+            <!-- ส่วนชำระเงิน -->
+            <section class="space-y-4 border-t border-dashed border-gray-100 pt-6">
+                <div class="text-center space-y-1">
+                    <span class="text-slate-800 font-bold text-sm block">ช่องทางการชำระเงิน</span>
+                    <p class="text-[11px] text-slate-400">ชื่อบัญชี: จุฑาพร สุขเกษม</p>
+                </div>
+                <div class="flex justify-center">
+                    <img src="https://lh3.googleusercontent.com/d/1V5QPgaWZ6P-ESF7isHs3KKXY_2MQn3pJ" alt="PromptPay QR Code" class="w-52 h-auto rounded-3xl shadow-sm border border-gray-50 p-1">
+                </div>
+            </section>
+
+            <!-- แนบสลิป -->
+            <section class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-700 font-bold text-sm">หลักฐานการโอน</span>
+                    <span id="fileInfo" class="text-[10px] text-emerald-600 font-medium"></span>
+                </div>
+                <input type="file" id="slipInput" accept="image/*" class="hidden" required>
+                <label for="slipInput" class="flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50 hover:bg-emerald-50/50 hover:border-emerald-300 cursor-pointer overflow-hidden transition-all group">
+                    <div id="uploadUI" class="text-center space-y-2">
+                        <div class="bg-white p-3 rounded-2xl shadow-sm inline-block group-hover:scale-110 transition-transform">
+                            <i data-lucide="camera" class="w-8 h-8 text-gray-400"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 font-medium">แตะที่นี่เพื่อถ่ายรูปหรือแนบสลิป</p>
+                    </div>
+                    <img id="previewImg" class="hidden w-full h-full object-contain p-2 bg-white">
+                </label>
+            </section>
+
+            <button type="submit" id="submitBtn" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-5 rounded-3xl shadow-xl flex items-center justify-center space-x-2 transition-all active:scale-95">
                 <i data-lucide="send" class="w-5 h-5"></i>
-                <span>ยืนยันออเดอร์</span>
+                <span>ส่งออเดอร์เดี๋ยวนี้</span>
             </button>
         </form>
     </div>
 
-    <!-- หน้าจอรอการส่งข้อมูล -->
+    <!-- Loading Overlay -->
     <div id="loading" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-white p-8 rounded-3xl text-center space-y-4">
-            <div class="animate-spin h-10 w-10 border-4 border-emerald-800 border-t-transparent rounded-full mx-auto"></div>
-            <p class="font-medium text-emerald-900 loading-dots">กำลังบันทึกข้อมูลและตัดสต็อก</p>
+        <div class="bg-white p-10 rounded-[2.5rem] text-center space-y-5 shadow-2xl">
+            <div class="relative animate-spin h-16 w-16 border-4 border-emerald-800 border-t-transparent rounded-full mx-auto"></div>
+            <p class="font-bold text-emerald-900 text-lg loading-dots">กำลังบันทึกข้อมูลและตัดสต็อก</p>
         </div>
     </div>
 
     <script>
-        // URL สคริปต์ที่เชื่อมต่อกับ Google Sheets
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxrZThRMUWHsi_STnR0gEQtUo7cAcD-KjMpa_vr1moWVju4COGZj_gB7cU3LcbJ_nEl/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsJ1GHNa6oR6xGw44B2d9sCjvpz65J14eO_Baah4r_fhoPkzPt-ohnp2VmIgKL92p3/exec";
 
         let MENU = [
-            { id: 'm1', name: 'เพียวมัทฉะ', price: 60, stock: 0, icon: 'leaf' },
-            { id: 'm2', name: 'มัทฉะลาเต้', price: 65, stock: 0, icon: 'coffee' },
-            { id: 'm3', name: 'แซนด์วิชทูน่า (โฮลวีต)', price: 35, stock: 0, icon: 'sandwich' },
-            { id: 'm4', name: 'แซนด์วิชทูน่า (ขาวตัดขอบ)', price: 35, stock: 0, icon: 'sandwich' }
+            { 
+                id: 'm1', name: '(ชา) เพียวมัทฉะ', price: 60, stock: 0, icon: 'leaf', type: 'drink',
+                options: { sweetness: ['0%', '25%', '50%', '100%', '125%'] }
+            },
+            { 
+                id: 'm2', name: '(ชาเขียว) มัทฉะลาเต้', price: 65, stock: 0, icon: 'coffee', type: 'drink',
+                options: { 
+                    milk: ['นมวัว', 'นมโอ๊ต'],
+                    sweetness: ['0%', '25%', '50%', '100%', '125%']
+                }
+            },
+            { 
+                id: 'm3', name: '🥪 แซนด์วิชทูน่า', price: 35, stock: 0, icon: 'sandwich', type: 'food',
+                options: { bread: ['ขนมปังขาวตัดขอบ', 'ขนมปังโฮลวีต (เนื้อละเอียด)'] }
+            }
         ];
 
-        let state = { items: {}, slip: null, fileName: "" };
-        MENU.forEach(m => state.items[m.id] = 0);
+        let state = { items: {}, selections: {}, slip: null, fileName: "" };
 
-        // ดึงข้อมูลสต็อกปัจจุบันจาก Google Sheets
+        MENU.forEach(m => {
+            state.items[m.id] = 0;
+            state.selections[m.id] = {};
+            if (m.options?.sweetness) state.selections[m.id].sweetness = '100%';
+            if (m.options?.milk) state.selections[m.id].milk = 'นมวัว';
+            if (m.options?.bread) state.selections[m.id].bread = 'ขนมปังขาวตัดขอบ';
+        });
+
         async function fetchStock() {
             try {
                 const res = await fetch(SCRIPT_URL);
@@ -110,31 +184,88 @@
             }
         }
 
-        // แสดงรายการเมนู
+        window.selectOption = function(itemId, key, value) {
+            state.selections[itemId][key] = value;
+            renderMenu();
+        };
+
         function renderMenu() {
-            const menuList = document.getElementById('menuList');
-            menuList.innerHTML = '';
+            const container = document.getElementById('menuContainer');
+            container.innerHTML = '';
+            
             MENU.forEach(m => {
                 const isOut = m.stock <= 0;
                 const div = document.createElement('div');
-                div.className = `flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm ${isOut ? 'out-of-stock' : ''}`;
+                div.className = `p-4 bg-white border border-gray-100 rounded-3xl shadow-sm space-y-4 ${isOut ? 'out-of-stock' : ''}`;
+                
+                let optionsHtml = '';
+                if (state.items[m.id] > 0) {
+                    optionsHtml = `<div class="pt-3 border-t border-gray-50 space-y-4">`;
+                    
+                    if (m.options?.milk) {
+                        optionsHtml += `
+                            <div class="space-y-2">
+                                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">เลือกประเภทนม</span>
+                                <div class="flex flex-wrap">
+                                    ${m.options.milk.map(opt => `
+                                        <div onclick="window.selectOption('${m.id}', 'milk', '${opt}')" 
+                                             class="option-btn ${state.selections[m.id].milk === opt ? 'option-selected' : ''}">${opt}</div>
+                                    `).join('')}
+                                </div>
+                            </div>`;
+                    }
+
+                    if (m.options?.sweetness) {
+                        optionsHtml += `
+                            <div class="space-y-2">
+                                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">ระดับความหวาน</span>
+                                <div class="flex flex-wrap">
+                                    ${m.options.sweetness.map(opt => `
+                                        <div onclick="window.selectOption('${m.id}', 'sweetness', '${opt}')" 
+                                             class="option-btn ${state.selections[m.id].sweetness === opt ? 'option-selected' : ''}">${opt}</div>
+                                    `).join('')}
+                                </div>
+                            </div>`;
+                    }
+
+                    if (m.options?.bread) {
+                        optionsHtml += `
+                            <div class="space-y-2">
+                                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">เลือกประเภทขนมปัง</span>
+                                <div class="flex flex-col gap-1.5">
+                                    ${m.options.bread.map(opt => `
+                                        <div onclick="window.selectOption('${m.id}', 'bread', '${opt}')" 
+                                             class="option-btn text-left block w-full ${state.selections[m.id].bread === opt ? 'option-selected' : ''}">
+                                             <span class="font-medium">${opt}</span>
+                                             ${opt.includes('โฮลวีต') ? '<span class="text-[9px] block opacity-70 italic font-normal">เนื้อละเอียดมากกก ไม่ใช่ของฟรีใต้หอนะคะ</span>' : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>`;
+                    }
+                    optionsHtml += `</div>`;
+                }
+
                 div.innerHTML = `
-                    <div class="flex items-center space-x-3">
-                        <div class="bg-emerald-50 p-2 rounded-lg text-emerald-700">
-                             <i data-lucide="${m.icon}" class="w-5 h-5"></i>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-emerald-50 p-2.5 rounded-2xl text-emerald-700">
+                                 <i data-lucide="${m.icon}" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800 text-sm">${m.name}</div>
+                                <div class="text-[10px] text-gray-400 font-medium italic">คงเหลือ ${m.stock} ชิ้น</div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-semibold text-gray-800 text-sm">${m.name}</div>
-                            <div class="text-[10px] text-gray-400">฿ ${m.price} | คงเหลือ ${m.stock}</div>
+                        <div class="flex items-center bg-gray-50 rounded-2xl p-1 border border-gray-100">
+                            <button type="button" onclick="changeQty('${m.id}', -1)" class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-white transition-all">-</button>
+                            <span class="font-bold text-emerald-800 w-8 text-center text-sm">${state.items[m.id]}</span>
+                            <button type="button" onclick="changeQty('${m.id}', 1)" ${state.items[m.id] >= m.stock ? 'disabled' : ''} class="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-white disabled:opacity-30 transition-all">+</button>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-3">
-                        <button type="button" onclick="changeQty('${m.id}', -1)" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center">-</button>
-                        <span class="font-bold text-emerald-800 w-4 text-center text-sm">${state.items[m.id]}</span>
-                        <button type="button" onclick="changeQty('${m.id}', 1)" ${state.items[m.id] >= m.stock ? 'disabled' : ''} class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200 disabled:opacity-30 flex items-center justify-center">+</button>
-                    </div>
+                    ${optionsHtml}
                 `;
-                menuList.appendChild(div);
+                container.appendChild(div);
             });
             lucide.createIcons();
         }
@@ -149,13 +280,15 @@
         document.getElementById('noCupDiscount').addEventListener('change', updateTotal);
 
         function updateTotal() {
-            let subtotal = 0, totalQty = 0;
+            let total = 0, drinkCount = 0;
             MENU.forEach(m => {
-                subtotal += state.items[m.id] * m.price;
-                totalQty += state.items[m.id];
+                total += state.items[m.id] * m.price;
+                if (m.type === 'drink') drinkCount += state.items[m.id];
             });
-            const discount = (document.getElementById('noCupDiscount').checked && totalQty > 0) ? 5 : 0;
-            document.getElementById('totalText').innerText = `฿ ${Math.max(0, subtotal - discount).toLocaleString()}`;
+            const isNoCup = document.getElementById('noCupDiscount').checked;
+            const discount = (isNoCup && drinkCount > 0) ? (drinkCount * 5) : 0;
+            const final = Math.max(0, total - discount);
+            document.getElementById('totalText').innerText = `฿ ${final.toLocaleString()}`;
         }
 
         document.getElementById('slipInput').addEventListener('change', function(e) {
@@ -175,14 +308,17 @@
         document.getElementById('orderForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const totalQty = Object.values(state.items).reduce((a, b) => a + b, 0);
-            if (totalQty === 0) return alert('กรุณาเลือกเมนูอย่างน้อย 1 อย่างก่อนส่งออเดอร์นะคะ 😊');
-            if (!state.slip) return alert('รบกวนแนบสลิปโอนเงินเพื่อยืนยันออเดอร์ด้วยค่ะ');
+            if (totalQty === 0) return alert('กรุณาเลือกเมนูอย่างน้อย 1 อย่างนะคะ');
+            if (!state.slip) return alert('รบกวนแนบสลิปเพื่อยืนยันออเดอร์ด้วยค่ะ');
 
             document.getElementById('loading').classList.remove('hidden');
+
             const payload = {
                 orderNumber: e.target.orderNumber.value,
-                m1: state.items.m1, m2: state.items.m2, m3: state.items.m3, m4: state.items.m4,
-                noCup: document.getElementById('noCupDiscount').checked ? "ใช่" : "ไม่ใช่",
+                m1: state.items.m1 > 0 ? `${state.items.m1} (หวาน ${state.selections.m1.sweetness})` : 0,
+                m2: state.items.m2 > 0 ? `${state.items.m2} (${state.selections.m2.milk}, หวาน ${state.selections.m2.sweetness})` : 0,
+                m3: state.items.m3 > 0 ? `${state.items.m3} (${state.selections.m3.bread})` : 0,
+                noCup: document.getElementById('noCupDiscount').checked ? "ใช่ (-5บ./แก้ว)" : "ไม่ใช่",
                 total: document.getElementById('totalText').innerText.replace('฿ ', ''),
                 timestamp: new Date().toLocaleString('th-TH'),
                 slipData: state.slip,
@@ -190,17 +326,11 @@
             };
             
             try {
-                await fetch(SCRIPT_URL, { 
-                    method: 'POST', 
-                    mode: 'no-cors', 
-                    cache: 'no-cache',
-                    body: JSON.stringify(payload) 
-                });
-                
-                alert('ส่งออเดอร์และตัดสต็อกเรียบร้อยแล้วค่ะ! ขอบคุณมากนะคะ');
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                alert('ส่งออเดอร์เรียบร้อยแล้วค่ะ! ขอบคุณมากนะคะ 😊');
                 location.reload(); 
             } catch (err) {
-                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่นะคะ');
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
                 document.getElementById('loading').classList.add('hidden');
             }
         });
